@@ -1,0 +1,234 @@
+Imports System.ComponentModel
+Imports System.IO
+Public Class frmNFA
+
+    Private Sub Initialize()
+        lblPortStatus.Text = String.Format("Port: {0} ({1})", My.Settings.portname, IIf((IsPortConnected()), "ACTIVE", "INACTIVE"))
+        lblUserAccount.Text = String.Format("Login as: {0} ({1})", thisUser.Lastname & ", " & thisUser.Firstname, thisUser.UserFunction)
+    End Sub
+    Private Sub frmNFA_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        UserAccountsToolStripMenuItem.Visible = (thisUser.IsAdmin)
+        btnDelete.Enabled = (thisUser.IsAdmin)
+        DeleteToolStripMenuItem.Enabled = (thisUser.IsAdmin)
+        DeveloperToolToolStripMenuItem.Enabled = (thisUser.IsSuperAdmin)
+        cboDisplay.SelectedIndex = 1
+        PopulateList()
+        Initialize()
+        ConnectToWeighScale()
+        LoadPortInfo()
+    End Sub
+
+    Private Sub ConnectToWeighScale()
+        Try
+            With weighScale
+                .PortName = My.Settings.portname
+                .ReadTimeout = My.Settings.readtimeout
+                .BaudRate = My.Settings.baudrate
+                .DataBits = My.Settings.databits
+                .StopBits = My.Settings.stopbits
+                .Open()
+            End With
+        Catch ex As Exception
+            lblportError.Text = "Error connecting to the scale. Check your port configuration!"
+        End Try
+    End Sub
+
+    Private Sub cboDisplay_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboDisplay.SelectedIndexChanged
+        Panel5.Visible = (cboDisplay.SelectedIndex = 2)
+    End Sub
+
+    Private Sub btnAddTransaction_Click(sender As Object, e As EventArgs) Handles btnAddTransaction.Click, AddNewToolStripMenuItem.Click
+        Dim frm As New frmTransactionWindow
+        frm.EditMode = False
+        weighScale.Close()
+        frm.ShowDialog()
+        PopulateList()
+        ConnectToWeighScale()
+    End Sub
+    Private Sub btnrefresh_Click(sender As Object, e As EventArgs) Handles btnrefresh.Click, RefreshToolStripMenuItem.Click
+        PopulateList()
+        LoadPortInfo
+    End Sub
+
+    Sub LoadPortInfo()
+        With My.Settings
+            lblPort.Text = .portname
+            lblreadtimeout.Text = .readtimeout
+            lblbaudrate.Text = .baudrate
+            lbldatabits.Text = .databits
+            lblstopbits.Text = .stopbits
+        End With
+    End Sub
+
+    Function SelectionFilter() As String
+        Dim dateSelection As String = ""
+        If (cboDisplay.Text = "Recent 30 Days") Then
+            dateSelection = " AND (transaction_date > " & Format(DateAdd(DateInterval.Day, -30, Now()), "#dd/MM/yyyy#") & ")"
+        ElseIf (cboDisplay.Text = "Custom Date Range") Then
+            dateSelection = " AND (transaction_date >= " & Format(dtpfrom.Value, "#dd/MM/yyyy#") & " AND transaction_date <= " & Format(dtpto.Value, "#dd/MM/yyyy#") & ")"
+        End If
+
+        Dim findSelection As String = ""
+        If txtSearch.Text <> "" Then
+            findSelection = " AND (transaction_type LIKE '%" & txtSearch.Text & "%' OR trucker_name LIKE '%" & txtSearch.Text & "%' OR driver_name LIKE '%" & txtSearch.Text & "%' OR plate_no LIKE '%" & txtSearch.Text & "%')"
+        End If
+
+
+        Dim cmdFilter As String = "FROM tbltransaction WHERE archive=0 " & dateSelection & findSelection & " ORDER BY transaction_date DESC"
+
+        Return cmdFilter
+    End Function
+    Public Sub PopulateList()
+        PopulateDataGridView(dtgtransaction,
+                             "SELECT TOP 100 format(transaction_date,""yyyy-MM-dd""),slipno,transaction_type,trucker_name,driver_name," &
+                    "plate_no,qty_ave,variety_code,gross_weight,tare_weight,net_weight,warehouse,keyID " & SelectionFilter(), True)
+    End Sub
+
+    Private Sub PortConfigurationToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles PortConfigurationToolStripMenuItem.Click
+        Dim frm As New frmPortConfiguration
+        frm.ShowDialog()
+    End Sub
+    Private Sub btnEditTransaction_Click(sender As Object, e As EventArgs) Handles btnEditTransaction.Click, EditUpdateToolStripMenuItem.Click
+        Dim frm As New frmTransactionWindow
+        frm.EditMode = True
+        frm.TransactionID = dtgtransaction.SelectedRows.Item(0).Cells(dtgtransaction.ColumnCount - 1).Value
+        frm.ShowDialog()
+        PopulateList()
+    End Sub
+
+    Private Sub btnDelete_Click(sender As Object, e As EventArgs) Handles btnDelete.Click, DeleteToolStripMenuItem.Click
+        btnDelete.Focus()
+        CountCheckedRows()
+        Dim rowSelected As Integer = CountCheckedRows()
+        If (rowSelected > 0) Then
+            If MessageBox.Show(Me, "Are you sure you want the selected record(s)", "Delete Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) = DialogResult.Yes Then
+                Dim d As New clsDataManipulation
+                d.Exec("UPDATE tbltransaction SET archive=1, archive_by='" & thisUser.FullName & "', archived_date='" & Format(Now(), "yyyy-MM-dd") & "'WHERE keyid in (" & checkedKeyids & ")")
+            End If
+        End If
+        PopulateList()
+    End Sub
+    Dim checkedKeyids As String = ""
+    Function CountCheckedRows() As Integer
+        Dim ctr As Integer = 0
+        Dim row As DataGridViewRowCollection = dtgtransaction.Rows
+        For i As Integer = 0 To row.Count - 1
+            If (CType(row.Item(i).Cells(0).Value, Boolean) = True) Then
+                ctr += 1
+                checkedKeyids &= IIf(checkedKeyids <> "", row.Item(i).Cells(dtgtransaction.ColumnCount - 1).Value & ",", row.Item(i).Cells(dtgtransaction.ColumnCount - 1).Value)
+            End If
+        Next
+        Return ctr
+    End Function
+    Private Sub lnkcheckAll_LinkClicked(sender As Object, e As LinkLabelLinkClickedEventArgs) Handles lnkcheckAll.LinkClicked
+        If lnkcheckAll.Text = "Check All" Then
+            For i As Integer = 0 To dtgtransaction.RowCount - 1
+                dtgtransaction.Item(0, i).Value = True
+            Next
+            lnkcheckAll.Text = "Clear All"
+        Else
+            For i As Integer = 0 To dtgtransaction.RowCount - 1
+                dtgtransaction.Item(0, i).Value = False
+            Next
+            lnkcheckAll.Text = "Check All"
+        End If
+    End Sub
+
+    Private Sub dtgtransaction_CellBeginEdit(sender As Object, e As DataGridViewCellCancelEventArgs) Handles dtgtransaction.CellBeginEdit
+        If (CountCheckedRows() > 0) Then
+            lnkcheckAll.Text = "Clear All"
+        Else
+            lnkcheckAll.Text = "Check All"
+        End If
+    End Sub
+
+    Private Sub btnCancel_Click(sender As Object, e As EventArgs) Handles btnCancel.Click
+        Panel5.Visible = False
+    End Sub
+
+    Private Sub btnApply_Click(sender As Object, e As EventArgs) Handles btnApply.Click
+        Panel5.Visible = False
+        PopulateList()
+    End Sub
+
+    Private Sub txtSearch_TextChanged(sender As Object, e As EventArgs) Handles txtSearch.TextChanged
+        PopulateList()
+    End Sub
+
+    Private Sub btnExcelExport_Click(sender As Object, e As EventArgs) Handles btnExcelExport.Click, EditToolStripMenuItem.Click
+        Dim filename As String = "Weighing Scale Transaction Pro " & Format(Now(), "yyyyMMdd_hhmmss") & ".csv"
+        Dim saveFileDialog As New SaveFileDialog
+        saveFileDialog.FileName = filename
+        saveFileDialog.DefaultExt = ".csv"
+        saveFileDialog.ShowDialog()
+
+        Dim sWriter As New StreamWriter(saveFileDialog.FileName)
+        Dim strLine As String = String.Format("""{0}"",""{1}"",""{2}"",""{3}"",""{4}"",""{5}"",""{6}"",""{7}"",""{8}"",""{9}"",""{10}""",
+                                              "Transaction Date", "Slip No.", "Trucker Name", "Driver Name", "Plate No.", "Qty/Ave",
+                                              "Variety Code", "Gross Weight", "Tare Weight", "Net Weight", "Warehouse")
+        sWriter.WriteLine(strLine)
+        Dim d As New clsDataManipulation
+        With d
+            If (.Fetch("SELECT * " & SelectionFilter())) Then
+                With .DataReader
+                    Do While .Read
+                        strLine = String.Format("""{0}"",""{1}"",""{2}"",""{3}"",""{4}"",""{5}"",""{6}"",""{7}"",""{8}"",""{9}"",""{10}""",
+                                                              FormatDateTime(.Item("transaction_date").ToString, DateFormat.ShortDate), .Item("slipno").ToString,
+                                                .Item("trucker_name").ToString, .Item("driver_name").ToString, .Item("plate_no").ToString,
+                                                .Item("qty_ave").ToString, .Item("variety_code").ToString, .Item("gross_weight").ToString,
+                                                .Item("tare_weight").ToString, .Item("net_weight").ToString, .Item("warehouse").ToString)
+                        sWriter.WriteLine(strLine)
+                    Loop
+                    .Close()
+                End With
+            End If
+        End With
+        sWriter.Close()
+
+        MessageBox.Show(Me, "Export successfully finished!", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+    End Sub
+
+    Private Sub EditToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles EditToolStripMenuItem.Click
+
+    End Sub
+
+    Private Sub RefreshToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles RefreshToolStripMenuItem.Click
+
+    End Sub
+
+    Private Sub UserAccountsToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles UserAccountsToolStripMenuItem.Click
+        Dim frm As New frmUserAccounts
+        frm.ShowDialog(Me)
+    End Sub
+
+    Private Sub ExitToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExitToolStripMenuItem.Click
+        Me.Close()
+    End Sub
+
+    Private Sub DeveloperToolToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles DeveloperToolToolStripMenuItem.Click
+        Dim frm As New frmDeveloperTools
+        frm.ShowDialog()
+    End Sub
+    Private Sub frmNFA_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
+        weighScale.Close()
+    End Sub
+
+    Private Sub weighScale_DataReceived(sender As Object, e As Ports.SerialDataReceivedEventArgs) Handles weighScale.DataReceived
+        Dim str() As String = Split(weighScale.ReadExisting(), vbCr)
+        Dim validLine As String = str(str.Count - 1)
+        If validLine.Length > 5 Then
+            Dim validVal() As String = Split(validLine, "     ")
+            WeighingScaleReading = Val(Replace(validLine, "?" & ChrW(2) & ":0    ", ""))
+            lblreading.Text = WeighingScaleReading
+        End If
+    End Sub
+    Private Sub dtgtransaction_DoubleClick(sender As Object, e As EventArgs) Handles dtgtransaction.DoubleClick
+        Dim frm As New frmTransactionWindow
+        frm.EditMode = True
+        frm.TransactionID = dtgtransaction.SelectedRows.Item(0).Cells(dtgtransaction.ColumnCount - 1).Value
+        frm.ShowDialog()
+        PopulateList()
+    End Sub
+
+End Class

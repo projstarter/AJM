@@ -1,0 +1,39 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="My" GeneratedClassName="MySettings" UseMySettingsClassName="true">
+  <Profiles />
+  <Settings>
+    <Setting Name="portname" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="baudrate" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">9600</Value>
+    </Setting>
+    <Setting Name="databits" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">8</Value>
+    </Setting>
+    <Setting Name="stopbits" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="readtimeout" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">10000</Value>
+    </Setting>
+    <Setting Name="Use_Counter" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="key1" Type="System.String" Scope="User">
+      <Value Profile="(Default)">UUAIv</Value>
+    </Setting>
+    <Setting Name="key2" Type="System.String" Scope="User">
+      <Value Profile="(Default)">5X1Qg</Value>
+    </Setting>
+    <Setting Name="key3" Type="System.String" Scope="User">
+      <Value Profile="(Default)">k3NaO</Value>
+    </Setting>
+    <Setting Name="key4" Type="System.String" Scope="User">
+      <Value Profile="(Default)">zdzHV</Value>
+    </Setting>
+    <Setting Name="key5" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Mkd0C</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

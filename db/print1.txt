@@ -1,0 +1,23 @@
+driver's name
+slipno
+
+warehouse
+
+		   115		vc
+		   0
+23 04 21	   15
+
+
+
+Gross     :   115		
+
+Tare      :   100		
+
+Net       :   15
+
+
+
+
+
+CONDES, DANILO
+		trucker name	plateno
