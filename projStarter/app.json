@@ -1,0 +1,42 @@
+{
+  "CompanyInformation": [
+    {
+      "name": "MASTER ALVIN RICEMILL",
+      "address": "PARISTA,LUPAO,NUEVA ECIJA"
+    }
+  ],
+  "PortInformation": [
+    {
+      "portname": "COM3",
+      "baudrate": 4800,
+      "readtimeout": 10000,
+      "databits": 8,
+      "stopbits": 1,
+      "source": ""
+    }
+  ],
+  "GridDisp": "PENDING",
+  "Print": [
+    "rpt_keyid",
+    "rpt_key_date",
+    "rpt_operator",
+    "rpt_ticketno",
+    "rpt_customer",
+    "rpt_product",
+    "rpt_plateno",
+    "rpt_driver",
+    "rpt_qty",
+    "rpt_price",
+    "rpt_tprice",
+    "rpt_sprice",
+    "rpt_aveweight",
+    "rpt_firstweight_capturedate",
+    "rpt_secondweight_capturedate",
+    "rpt_price",
+    "rpt_tprice",
+    "rpt_tare",
+    "rpt_gross",
+    "rpt_net",
+    "rpt_remarks"
+  ]
+}
