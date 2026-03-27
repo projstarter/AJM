@@ -463,7 +463,7 @@ Public Class frmMain
         Else
             SaveTransaction()
         End If
-        BeginPrint(ticketno)
+        BeginPrint(ticketno, (txt2ndweighin_capturedate.Text <> ""))
     End Sub
 
 
@@ -475,7 +475,7 @@ Public Class frmMain
 
     Private Sub btnprint_Click(sender As Object, e As EventArgs) Handles btnprint.Click
         Dim ticketno As String = txtticketno.Text
-        BeginPrint(ticketno)
+        BeginPrint(ticketno, (txt2ndweighin_capturedate.Text <> ""))
     End Sub
 
     Private Sub DeleteTransactionToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles DeleteTransactionToolStripMenuItem.Click, btndelete.Click
@@ -504,5 +504,9 @@ Public Class frmMain
 
     Private Sub txtscaleprice_Leave(sender As Object, e As EventArgs) Handles txtscaleprice.Leave
         txtscaleprice.Text = Val(txtscaleprice.Text).ToString("F2")
+    End Sub
+
+    Private Sub BackgroundWorker1_DoWork(sender As Object, e As System.ComponentModel.DoWorkEventArgs) Handles BackgroundWorker1.DoWork
+
     End Sub
 End Class

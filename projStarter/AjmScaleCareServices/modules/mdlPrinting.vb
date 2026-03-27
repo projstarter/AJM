@@ -89,9 +89,9 @@ Module mdlPrinting
         Dim xlSht As Excel.Worksheet = xlWb.Worksheets(1)
 
         'Columns
-        Dim xlRange As String = "ABCDEFGHIJKLMNOP"
+        Dim xlRange As String = "ABCDEFGHIJKLMNOPQRST"
         Dim ReportColumns As String() = ({"Date", "TicketNo", "Customer", "Product", "Drive", "PlateNo", "Qty", "Price", "Scale Price", "Total Price", "Ave Weight", "Gross", "Tare", "Net", "1st Weigh In", "2nd Weigh In", "Transacted By", "Remarks"})
-        Dim DatabaseColumns As String() = ({"date", "ticketno", "customer", "product", "driver", "plateno", "qty", "price", "tprice", "sprice", "aveweight", "gross", "tare", "net", "firstweight_capturedate", "secondweight_capturedate", "operator", "remarks"})
+        Dim DatabaseColumns As String() = ({"date", "ticketno", "customer", "product", "driver", "plateno", "qty", "price", "sprice", "tprice", "aveweight", "gross", "tare", "net", "firstweight_capturedate", "secondweight_capturedate", "operator", "remarks"})
         Dim CellRow As Integer = 1
 
         'Report Column
@@ -134,9 +134,9 @@ Module mdlPrinting
 
     End Sub
 
-    Public Sub BeginPrint(ticketno As String)
+    Public Sub BeginPrint(ticketno As String, isComplete As Boolean)
 
-        Dim template As String = Environment.CurrentDirectory & "\_Print_Template.xlsx"
+        Dim template As String = IIf((isComplete), Environment.CurrentDirectory & "\_Print_Template 1.xlsx", Environment.CurrentDirectory & "\_Print_Template 2.xlsx")
         Dim output As String = Environment.CurrentDirectory & "\_Print_Output.xlsx"
 
         ' delete the file first
