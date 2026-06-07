@@ -93,7 +93,8 @@ Module mdlGlobal
         Return items
     End Function
     Public Function FormatReading(reading As String) As Integer
-        Dim r As String() = Split(StrReverse(reading), "=")
+        'Return Val(reading)
+        Dim r As String() = Split(reading, vbNewLine)
         Try
             Return IIf(r.Length >= 2, Val(r(1)), 0)
         Catch ex As Exception

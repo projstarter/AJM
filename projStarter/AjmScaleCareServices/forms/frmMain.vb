@@ -1,4 +1,10 @@
-﻿Imports System.IO.Ports
+﻿Imports System.ComponentModel
+Imports System.Globalization
+Imports System.IO
+Imports System.IO.Ports
+Imports System.Drawing
+Imports System.Text.RegularExpressions
+Imports System.Windows.Forms.VisualStyles
 Imports Excel = Microsoft.Office.Interop.Excel
 
 Public Class frmMain
@@ -28,7 +34,10 @@ Public Class frmMain
             AppLog = "Updating transaction..."
         End If
     End Sub
-    Dim WithEvents objSerialPort As New SerialPort
+
+    Private WithEvents objSerialPort As SerialPort
+    Private capturedReading As Integer = 0
+
     Private Sub frmMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         InitializeStartUp()
     End Sub
@@ -73,7 +82,7 @@ Public Class frmMain
         Load_AppConfiguration()
         UpdateButtonCategory()
         PopulateList()
-        OpenSerialPort()
+        ConnectToWeighScale()
 
         lblcompanyname.Text = CompanyInformation.CompanyName
         lblcompanyaddress.Text = CompanyInformation.CompanyAddress
@@ -492,10 +501,27 @@ Public Class frmMain
 
     Private Sub tmrReading_Tick(sender As Object, e As EventArgs) Handles tmrReading.Tick
         Try
-            lblreading.Text = FormatReading(objSerialPort.ReadExisting)
+            lblreading.Text = capturedReading 'FormatReading(objSerialPort.ReadExisting)
         Catch ex As Exception
 
         End Try
+
+        If objSerialPort IsNot Nothing AndAlso objSerialPort.IsOpen Then
+
+            Dim secondsSinceLastData = (DateTime.Now - _lastDataReceived).TotalSeconds
+
+            If secondsSinceLastData > 2 Then ' 5 seconds no data
+                lblPortStatus.Text = $"Port: {My.Settings.portname} (No Data)"
+                'lblportError.Text = "Error connecting to the scale. Check your port configuration!"
+                lblreading.ForeColor = Color.Red
+                ConnectToWeighScale()
+
+            Else
+                lblPortStatus.Text = $"Port: {My.Settings.portname} (Connected)"
+                lblreading.ForeColor = Color.Lime
+                'lblportError.Text = ""
+            End If
+        End If
     End Sub
 
     Private Sub dtg_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles dtg.CellContentClick
@@ -505,8 +531,110 @@ Public Class frmMain
     Private Sub txtscaleprice_Leave(sender As Object, e As EventArgs) Handles txtscaleprice.Leave
         txtscaleprice.Text = Val(txtscaleprice.Text).ToString("F2")
     End Sub
+    Private Sub ConnectToWeighScale()
+        If objSerialPort IsNot Nothing Then
+            If objSerialPort.IsOpen Then
+                objSerialPort.Close()
+            End If
+            objSerialPort.Dispose()
+        End If
+        Try
+            Application.DoEvents()
 
-    Private Sub BackgroundWorker1_DoWork(sender As Object, e As System.ComponentModel.DoWorkEventArgs) Handles BackgroundWorker1.DoWork
+            objSerialPort = New SerialPort(
+            PortInformation.PortName,
+    PortInformation.BaudRate,
+    Parity.None, PortInformation.DataBits, PortInformation.StopBits) With {
+                .Handshake = Handshake.None,
+                .ReadTimeout = PortInformation.ReadTimeout,
+                .WriteTimeout = 500}
 
+
+            objSerialPort.Open()
+
+            'lblportError.Text = ""
+            'transactionpro_status = "Successfully connected to the weighing scale."
+        Catch ex As Exception
+            MessageBox.Show(ex.Message)
+            'transactionpro_status = "Error connecting to the scale. Check your port configuration!"
+            'lblportError.Text = "Error connecting to the scale. Check your port configuration!"
+            lblreading.ForeColor = Color.Red
+        End Try
+
+        'transactionpro_status = "Ready. Standby mode"
     End Sub
+
+    ' -----------------------------
+    ' SerialPort DataReceived event
+    ' -----------------------------
+    Private _lastDataReceived As DateTime
+    Private Sub _serialPort_DataReceived(sender As Object, e As Ports.SerialDataReceivedEventArgs) Handles objSerialPort.DataReceived
+        Try
+            Dim line As String = objSerialPort.ReadLine()
+            _lastDataReceived = DateTime.Now
+            Dim value As String = ExtractKgValue(line)
+            If String.IsNullOrEmpty(value) Then Return
+
+            'cntr += 1
+            capturedReading = Val(value)
+            'Dim output As String = $"*{cntr} | {value} | {line}*"
+
+            '' Thread-safe append to buffer
+            'SyncLock bufferLock
+            '    readBuffer.Add(output)
+            'End SyncLock
+        Catch
+            objSerialPort = Nothing
+        End Try
+    End Sub
+
+    ' -----------------------------
+    ' Extract numeric kg value using Regex
+    ' -----------------------------
+    Private Function ExtractKgValue2(s As String) As String
+        Dim match As Match = Regex.Match(
+        s,
+        "(-?[\d,]+(\.\d+)?)\s*kg",
+        RegexOptions.IgnoreCase
+    )
+
+        If match.Success Then
+            ' Remove commas but keep the minus sign
+            Return match.Groups(1).Value.Replace(",", "")
+        End If
+
+        Return String.Empty
+    End Function
+
+    Private Function ExtractKgValue(s As String) As String
+        ' Try with kg first
+        Dim match As Match = Regex.Match(
+            s,
+            "(-?[\d,]+(\.\d+)?)\s*kg",
+            RegexOptions.IgnoreCase
+        )
+
+        If Not match.Success Then
+            ' Fallback: just get any number
+            match = Regex.Match(
+                s,
+                "-?[\d,]+(\.\d+)?"
+            )
+        End If
+
+        If match.Success Then
+            Dim raw As String = match.Value.Replace(",", "")
+
+            ' Convert to number to remove leading zeros
+            Dim num As Decimal
+            If Decimal.TryParse(raw, num) Then
+                Return num.ToString()
+            End If
+
+            Return raw
+        End If
+
+        Return String.Empty
+    End Function
+
 End Class

@@ -136,7 +136,7 @@ Module mdlPrinting
 
     Public Sub BeginPrint(ticketno As String, isComplete As Boolean)
 
-        Dim template As String = IIf((isComplete), Environment.CurrentDirectory & "\_Print_Template 1.xlsx", Environment.CurrentDirectory & "\_Print_Template 2.xlsx")
+        Dim template As String = Environment.CurrentDirectory & "\_Print_Template 1.xlsx" 'IIf((isComplete), Environment.CurrentDirectory & "\_Print_Template 1.xlsx", Environment.CurrentDirectory & "\_Print_Template 2.xlsx")
         Dim output As String = Environment.CurrentDirectory & "\_Print_Output.xlsx"
 
         ' delete the file first
@@ -196,7 +196,7 @@ Module mdlPrinting
 
     End Sub
 
-    Private Sub SendToPrint(the_file As String)
+    Private Sub SendToPrint2(the_file As String)
         Dim monProcess As New Process()
         monProcess.StartInfo.FileName = the_file
         monProcess.StartInfo.Verb = "Print"
@@ -205,6 +205,21 @@ Module mdlPrinting
 
         Threading.Thread.Sleep(2000)
         Process.Start("cmd", "/c taskkill /IM ""excel.exe"" /F ")
+    End Sub
+
+
+    Private Sub SendToPrint(the_file As String)
+
+        Dim xlApp As New Excel.Application
+        Dim wb As Excel.Workbook
+
+        wb = xlApp.Workbooks.Open(the_file)
+
+        wb.PrintOut()
+
+        wb.Close(False)
+        xlApp.Quit()
+
     End Sub
 
     Private Sub releaseObject(ByVal obj As Object)
